@@ -16,12 +16,9 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 script {
-                    // Checkout the repository
                     checkout scm
-
-                    // Set the remote URL to HTTPS and use the GitHub token
+                    // Configure Git
                     sh '''
-                    git remote set-url origin https://vinnu2251:${GITHUB_TOKEN}@github.com/vinnu2251/go-web-app.git
                     git config --global user.email "vinaychowdarychitturi@gmail.com"
                     git config --global user.name "vinay chitturi"
                     '''
@@ -32,13 +29,17 @@ pipeline {
         stage('Sync with Remote') {
             steps {
                 script {
+                    // Fetch the latest changes and determine the current branch
                     def branchName = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
-                    echo "Current branch: ${branchName}"
+                    if (branchName == 'HEAD') {
+                        // If in detached HEAD state, switch to the main branch
+                        branchName = 'main'
+                        sh "git checkout ${branchName}"
+                    }
 
-                    // Ensure we're on the correct branch
+                    echo "Current branch: ${branchName}"
                     sh '''
                     git fetch origin
-                    git checkout ${branchName}
                     git pull origin ${branchName} --rebase
                     '''
                 }
@@ -134,6 +135,9 @@ pipeline {
                     echo "Current commit ID: ${commitId}"
 
                     def branchName = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    if (branchName == 'HEAD') {
+                        branchName = 'main'
+                    }
                     echo "Current branch: ${branchName}"
 
                     sh '''
