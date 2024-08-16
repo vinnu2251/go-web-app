@@ -77,13 +77,12 @@ pipeline {
                     def commitId = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
                     echo "Current commit ID: ${commitId}"
 
-                    def branchName = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
-                    if (branchName == 'HEAD') {
-                        branchName = 'main' // Default branch name if HEAD is detected
-                    }
+                    def branchName = 'main'
                     echo "Current branch: ${branchName}"
 
+                    // Ensure we're on the main branch
                     sh """
+                    git checkout ${branchName} || git checkout -b ${branchName}
                     sed -i 's/tag: .*/tag: "${commitId}"/' helm/go-web-app-chart/values.yaml
                     git add helm/go-web-app-chart/values.yaml
                     git commit -m "Update tag in Helm chart with commit ID ${commitId}"
