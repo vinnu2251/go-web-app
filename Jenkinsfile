@@ -83,10 +83,13 @@ pipeline {
                     }
                     echo "Current branch: ${branchName}"
 
+                    // Update Helm chart values.yaml with the commit ID
                     sh """
                     sed -i 's/tag: .*/tag: "${commitId}"/' helm/go-web-app-chart/values.yaml
                     git add helm/go-web-app-chart/values.yaml
-                    git commit -m "Update tag in Helm chart with commit ID ${commitId}"
+                    git commit -m "Update tag in Helm chart with commit ID ${commitId}" || true
+                    git fetch origin ${branchName}
+                    git checkout ${branchName}
                     git pull origin ${branchName} --rebase
                     git push https://vinnu2251:${GITHUB_TOKEN}@github.com/vinnu2251/go-web-app.git ${branchName}
                     """
