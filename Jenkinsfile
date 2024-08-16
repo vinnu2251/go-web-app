@@ -94,16 +94,20 @@ pipeline {
                     sed -i 's/tag: .*/tag: "${commitId}"/' helm/go-web-app-chart/values.yaml
                     """
 
-                    // Pull the latest changes from the remote branch
+                    // Stage and commit the changes
+                    sh """
+                    git add helm/go-web-app-chart/values.yaml
+                    git commit -m "Update tag in Helm chart with commit ID ${commitId}"
+                    """
+
+                    // Pull the latest changes from the remote branch with rebase
                     sh """
                     git pull origin ${branchName} --rebase
                     """
 
-                    // Add, commit, and push the changes using the GitHub token
+                    // Push the changes using the GitHub token
                     sh """
-                    git add helm/go-web-app-chart/values.yaml
-                    git commit -m "Update tag in Helm chart with commit ID ${commitId}"
-                    git push https://vinnu2251:${GITHUB_TOKEN}@github.com/vinnu2251/go-web-app.git HEAD:refs/heads/${branchName}
+                    git push https://vinnu2251:${GITHUB_TOKEN}@github.com/vinnu2251/go-web-app.git HEAD:${branchName}
                     """
                 }
             }
