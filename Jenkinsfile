@@ -77,17 +77,25 @@ pipeline {
                     def commitId = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
                     echo "Current commit ID: ${commitId}"
 
-                    def branchName = 'main'
-                    echo "Current branch: ${branchName}"
+                    def branchName = 'update-helm-chart'
+                    echo "Update branch: ${branchName}"
 
-                    // Ensure we're on the main branch
+                    // Create/update a separate branch for Helm chart updates
                     sh """
-                    git checkout ${branchName} || git checkout -b ${branchName}
+                    git checkout -b ${branchName} || git checkout ${branchName}
                     sed -i 's/tag: .*/tag: "${commitId}"/' helm/go-web-app-chart/values.yaml
                     git add helm/go-web-app-chart/values.yaml
                     git commit -m "Update tag in Helm chart with commit ID ${commitId}"
-                    git pull origin ${branchName} --rebase
-                    git push https://vinnu2251:${GITHUB_TOKEN}@github.com/vinnu2251/go-web-app.git ${branchName} -o ci.skip
+                    git push --set-upstream origin ${branchName}
+                    """
+
+                    // Instead of cherry-picking directly, use a manual approach to merge
+                    sh """
+                    git checkout main
+                    git pull origin main
+                    git merge ${branchName} --no-ff --no-commit
+                    git commit -m "Merge changes from ${branchName}"
+                    git push origin main
                     """
                 }
             }
