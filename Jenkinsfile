@@ -31,35 +31,54 @@ pipeline {
 
         stage('Sync with Remote') {
             steps {
-                sh '''
-                git fetch origin
-                git pull origin $(git rev-parse --abbrev-ref HEAD) --rebase
-                '''
+                script {
+                    def branchName = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    echo "Current branch: ${branchName}"
+
+                    // Ensure we're on the correct branch
+                    sh '''
+                    git fetch origin
+                    git checkout ${branchName}
+                    git pull origin ${branchName} --rebase
+                    '''
+                }
             }
         }
 
         stage('Apply Local Changes') {
             steps {
-                // Apply your local changes here if necessary
-                // For example, you can modify files, add new files, etc.
                 echo "Applying local changes (if any)"
+                // Apply your local changes here if necessary
             }
         }
 
         stage('Commit Local Changes') {
             steps {
-                sh '''
-                git add .
-                git commit -m "Apply local changes and update repository"
-                '''
+                script {
+                    def status = sh(script: 'git status --porcelain', returnStdout: true).trim()
+                    if (status) {
+                        sh '''
+                        git add .
+                        git commit -m "Apply local changes and update repository"
+                        '''
+                    } else {
+                        echo "No changes to commit."
+                    }
+                }
             }
         }
 
         stage('Push Changes to Remote') {
             steps {
-                sh '''
-                git push https://vinnu2251:${GITHUB_TOKEN}@github.com/vinnu2251/go-web-app.git HEAD:refs/heads/$(git rev-parse --abbrev-ref HEAD)
-                '''
+                script {
+                    def branchName = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    echo "Pushing changes to branch: ${branchName}"
+
+                    // Push the changes
+                    sh '''
+                    git push https://vinnu2251:${GITHUB_TOKEN}@github.com/vinnu2251/go-web-app.git ${branchName}
+                    '''
+                }
             }
         }
 
@@ -122,7 +141,7 @@ pipeline {
                     git add helm/go-web-app-chart/values.yaml
                     git commit -m "Update tag in Helm chart with commit ID ${commitId}"
                     git pull origin ${branchName} --rebase
-                    git push https://vinnu2251:${GITHUB_TOKEN}@github.com/vinnu2251/go-web-app.git HEAD:${branchName}
+                    git push https://vinnu2251:${GITHUB_TOKEN}@github.com/vinnu2251/go-web-app.git ${branchName}
                     '''
                 }
             }
