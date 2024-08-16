@@ -94,6 +94,11 @@ pipeline {
                     sed -i 's/tag: .*/tag: "${commitId}"/' helm/go-web-app-chart/values.yaml
                     """
 
+                    // Pull the latest changes from the remote branch
+                    sh """
+                    git pull origin ${branchName} --rebase
+                    """
+
                     // Add, commit, and push the changes using the GitHub token
                     sh """
                     git add helm/go-web-app-chart/values.yaml
