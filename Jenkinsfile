@@ -52,8 +52,13 @@ pipeline {
         stage('Docker Build & Tag') {
             steps {
                 script {
+                    // Get the commit ID
+                    def commitId = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    echo "Current commit ID: ${commitId}"
+
                     withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
-                        sh 'docker build -t vinay7944/go-web-app:v1 .'
+                        // Build and tag the Docker image with the commit ID
+                        sh "docker build -t vinay7944/go-web-app:${commitId} ."
                     }
                 }
             }
@@ -62,8 +67,12 @@ pipeline {
         stage('Docker Push Image') {
             steps {
                 script {
+                    // Get the commit ID again
+                    def commitId = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    
                     withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
-                        sh 'docker push vinay7944/go-web-app:v1'
+                        // Push the Docker image with the commit ID as the tag
+                        sh "docker push vinay7944/go-web-app:${commitId}"
                     }
                 }
             }
