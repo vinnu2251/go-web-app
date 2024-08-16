@@ -16,82 +16,28 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 script {
+                    // Checkout the repository
                     checkout scm
-                    // Configure Git
-                    sh '''
+
+                    // Set the remote URL to HTTPS and use the GitHub token
+                    sh """
+                    git remote set-url origin https://vinnu2251:${GITHUB_TOKEN}@github.com/vinnu2251/go-web-app.git
                     git config --global user.email "vinaychowdarychitturi@gmail.com"
                     git config --global user.name "vinay chitturi"
-                    '''
-                }
-            }
-        }
-
-        stage('Sync with Remote') {
-            steps {
-                script {
-                    // Fetch the latest changes and determine the current branch
-                    def branchName = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
-                    if (branchName == 'HEAD') {
-                        // If in detached HEAD state, switch to the main branch
-                        branchName = 'main'
-                        sh "git checkout ${branchName}"
-                    }
-
-                    echo "Current branch: ${branchName}"
-                    sh '''
-                    git fetch origin
-                    git pull origin ${branchName} --rebase
-                    '''
-                }
-            }
-        }
-
-        stage('Apply Local Changes') {
-            steps {
-                echo "Applying local changes (if any)"
-                // Apply your local changes here if necessary
-            }
-        }
-
-        stage('Commit Local Changes') {
-            steps {
-                script {
-                    def status = sh(script: 'git status --porcelain', returnStdout: true).trim()
-                    if (status) {
-                        sh '''
-                        git add .
-                        git commit -m "Apply local changes and update repository"
-                        '''
-                    } else {
-                        echo "No changes to commit."
-                    }
-                }
-            }
-        }
-
-        stage('Push Changes to Remote') {
-            steps {
-                script {
-                    def branchName = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
-                    echo "Pushing changes to branch: ${branchName}"
-
-                    // Push the changes
-                    sh '''
-                    git push https://vinnu2251:${GITHUB_TOKEN}@github.com/vinnu2251/go-web-app.git ${branchName}
-                    '''
+                    """
                 }
             }
         }
 
         stage('Build') {
             steps {
-                sh 'go build -o go-web-app'
+                sh "go build -o go-web-app"
             }
         }
 
         stage('Unit Test') {
             steps {
-                sh 'go test ./...'
+                sh "go test ./..."
             }
         }
 
@@ -107,11 +53,9 @@ pipeline {
             steps {
                 script {
                     def commitId = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-                    echo "Current commit ID: ${commitId}"
-
-                    withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
-                        sh "docker build -t vinay7944/go-web-app:${commitId} ."
-                    }
+                    sh """
+                    docker build -t vinay7944/go-web-app:${commitId} .
+                    """
                 }
             }
         }
@@ -120,7 +64,6 @@ pipeline {
             steps {
                 script {
                     def commitId = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-
                     withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
                         sh "docker push vinay7944/go-web-app:${commitId}"
                     }
@@ -136,17 +79,17 @@ pipeline {
 
                     def branchName = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
                     if (branchName == 'HEAD') {
-                        branchName = 'main'
+                        branchName = 'main' // Default branch name if HEAD is detected
                     }
                     echo "Current branch: ${branchName}"
 
-                    sh '''
+                    sh """
                     sed -i 's/tag: .*/tag: "${commitId}"/' helm/go-web-app-chart/values.yaml
                     git add helm/go-web-app-chart/values.yaml
                     git commit -m "Update tag in Helm chart with commit ID ${commitId}"
                     git pull origin ${branchName} --rebase
                     git push https://vinnu2251:${GITHUB_TOKEN}@github.com/vinnu2251/go-web-app.git ${branchName}
-                    '''
+                    """
                 }
             }
         }
