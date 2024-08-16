@@ -20,11 +20,11 @@ pipeline {
                     checkout scm
 
                     // Set the remote URL to HTTPS and use the GitHub token
-                    sh """
+                    sh '''
                     git remote set-url origin https://vinnu2251:${GITHUB_TOKEN}@github.com/vinnu2251/go-web-app.git
                     git config --global user.email "vinaychowdarychitturi@gmail.com"
                     git config --global user.name "vinay chitturi"
-                    """
+                    '''
                 }
             }
         }
@@ -33,10 +33,10 @@ pipeline {
             steps {
                 script {
                     // Pull the latest changes from the remote repository and rebase
-                    sh """
+                    sh '''
                     git fetch origin
                     git pull origin $(git rev-parse --abbrev-ref HEAD) --rebase
-                    """
+                    '''
                 }
             }
         }
@@ -54,10 +54,10 @@ pipeline {
             steps {
                 script {
                     // Add and commit the local changes
-                    sh """
+                    sh '''
                     git add .
                     git commit -m "Apply local changes and update repository"
-                    """
+                    '''
                 }
             }
         }
@@ -66,22 +66,22 @@ pipeline {
             steps {
                 script {
                     // Push the committed changes to the remote repository
-                    sh """
+                    sh '''
                     git push https://vinnu2251:${GITHUB_TOKEN}@github.com/vinnu2251/go-web-app.git HEAD:refs/heads/$(git rev-parse --abbrev-ref HEAD)
-                    """
+                    '''
                 }
             }
         }
 
         stage('Build') {
             steps {
-                sh "go build -o go-web-app"
+                sh 'go build -o go-web-app'
             }
         }
 
         stage('Unit Test') {
             steps {
-                sh "go test ./..."
+                sh 'go test ./...'
             }
         }
 
@@ -132,17 +132,17 @@ pipeline {
                     echo "Current branch: ${branchName}"
 
                     // Update the Helm chart with the new tag
-                    sh """
+                    sh '''
                     sed -i 's/tag: .*/tag: "${commitId}"/' helm/go-web-app-chart/values.yaml
-                    """
+                    '''
 
                     // Add, commit, and push the changes using the GitHub token
-                    sh """
+                    sh '''
                     git add helm/go-web-app-chart/values.yaml
                     git commit -m "Update tag in Helm chart with commit ID ${commitId}"
                     git pull origin ${branchName} --rebase
                     git push https://vinnu2251:${GITHUB_TOKEN}@github.com/vinnu2251/go-web-app.git HEAD:${branchName}
-                    """
+                    '''
                 }
             }
         }
