@@ -29,6 +29,50 @@ pipeline {
             }
         }
 
+        stage('Sync with Remote') {
+            steps {
+                script {
+                    // Pull the latest changes from the remote repository and rebase
+                    sh """
+                    git fetch origin
+                    git pull origin $(git rev-parse --abbrev-ref HEAD) --rebase
+                    """
+                }
+            }
+        }
+
+        stage('Apply Local Changes') {
+            steps {
+                script {
+                    // Apply your local changes here if necessary
+                    // For example, you can modify files, add new files, etc.
+                }
+            }
+        }
+
+        stage('Commit Local Changes') {
+            steps {
+                script {
+                    // Add and commit the local changes
+                    sh """
+                    git add .
+                    git commit -m "Apply local changes and update repository"
+                    """
+                }
+            }
+        }
+
+        stage('Push Changes to Remote') {
+            steps {
+                script {
+                    // Push the committed changes to the remote repository
+                    sh """
+                    git push https://vinnu2251:${GITHUB_TOKEN}@github.com/vinnu2251/go-web-app.git HEAD:refs/heads/$(git rev-parse --abbrev-ref HEAD)
+                    """
+                }
+            }
+        }
+
         stage('Build') {
             steps {
                 sh "go build -o go-web-app"
@@ -52,12 +96,11 @@ pipeline {
         stage('Docker Build & Tag') {
             steps {
                 script {
-                    // Get the commit ID
+                    // Get the commit ID to use as the Docker tag
                     def commitId = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
                     echo "Current commit ID: ${commitId}"
 
                     withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
-                        // Build and tag the Docker image with the commit ID
                         sh "docker build -t vinay7944/go-web-app:${commitId} ."
                     }
                 }
@@ -67,11 +110,10 @@ pipeline {
         stage('Docker Push Image') {
             steps {
                 script {
-                    // Get the commit ID again
+                    // Get the commit ID to push the correct Docker image
                     def commitId = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-                    
+
                     withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
-                        // Push the Docker image with the commit ID as the tag
                         sh "docker push vinay7944/go-web-app:${commitId}"
                     }
                 }
@@ -94,19 +136,11 @@ pipeline {
                     sed -i 's/tag: .*/tag: "${commitId}"/' helm/go-web-app-chart/values.yaml
                     """
 
-                    // Stage and commit the changes
+                    // Add, commit, and push the changes using the GitHub token
                     sh """
                     git add helm/go-web-app-chart/values.yaml
                     git commit -m "Update tag in Helm chart with commit ID ${commitId}"
-                    """
-
-                    // Pull the latest changes from the remote branch with rebase
-                    sh """
                     git pull origin ${branchName} --rebase
-                    """
-
-                    // Push the changes using the GitHub token
-                    sh """
                     git push https://vinnu2251:${GITHUB_TOKEN}@github.com/vinnu2251/go-web-app.git HEAD:${branchName}
                     """
                 }
