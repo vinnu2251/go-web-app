@@ -77,19 +77,18 @@ pipeline {
                     def commitId = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
                     echo "Current commit ID: ${commitId}"
 
-                    def branchName = 'main' // Set to main branch
-                    echo "Updating Helm chart for branch: ${branchName}"
+                    def branchName = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    if (branchName == 'HEAD') {
+                        branchName = 'main' // Default branch name if HEAD is detected
+                    }
+                    echo "Current branch: ${branchName}"
 
-                    // Ensure we're on the main branch
                     sh """
-                    git checkout ${branchName}
-                    git pull origin ${branchName} --rebase
-
-                    # Update Helm chart values.yaml with the commit ID
                     sed -i 's/tag: .*/tag: "${commitId}"/' helm/go-web-app-chart/values.yaml
                     git add helm/go-web-app-chart/values.yaml
-                    git commit -m "Update tag in Helm chart with commit ID ${commitId}" || true
-                    git push https://vinnu2251:${GITHUB_TOKEN}@github.com/vinnu2251/go-web-app.git ${branchName}
+                    git commit -m "Update tag in Helm chart with commit ID ${commitId}"
+                    git pull origin ${branchName} --rebase
+                    git push https://vinnu2251:${GITHUB_TOKEN}@github.com/vinnu2251/go-web-app.git ${branchName} -o ci.skip
                     """
                 }
             }
